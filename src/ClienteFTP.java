@@ -20,36 +20,74 @@ public class ClienteFTP {
 	int dataPort;
 	InetAddress ip;
 	
+	
 	public ClienteFTP(UsuarioFTP u) throws IOException { 
 		user = u;
 		
 	}
+	
+	
 	public void desconectar() throws IOException {
 		p.println("QUIT");
 		p.flush();
 		System.out.println(r.readLine());
 	}
-	public void subirFichero(String fichero) throws IOException {
-		p.println("STOR "+fichero);
-		p.flush();
+	
+	
+	public void subirFichero(String fichero, InetAddress ip) throws IOException {
 		
-		sData = new Socket(ip, dataPort);
-		pData = new PrintWriter(sData.getOutputStream());
-		System.out.println(r.readLine());
 		
 		File file = new File(fichero);
 		BufferedReader reader = null;
-		reader = new BufferedReader(new FileReader(file));
-	    String text = null;
-	    while ((text = reader.readLine()) != null) {
-	    	
-	    	pData.println(text);
-			pData.flush();
-	    }
-	    
-		reader.close();
-		sData.close();
+		try{
+		 reader = new BufferedReader(new FileReader(file));
+		}catch(IOException e){
+			System.out.println("No existe el archivo "+fichero);
+		}
+		
+		if(reader!=null){
+			p.println("STOR " + fichero);
+			p.flush();
+
+			sData = new Socket(ip, dataPort);
+			
+			pData = new PrintWriter(sData.getOutputStream());
+			System.out.println(r.readLine());
+
+			String text = null;
+			while ((text = reader.readLine()) != null) {
+
+				pData.println(text);
+				pData.flush();
+			}
+
+			reader.close();
+			sData.close();
+			System.out.println(r.readLine());
+		}
+
+	}
+	
+	public void log(String user, String pass) throws LoginException, IOException {
+		
+		
+		// Envia login
+		p.println("USER " + user);
+		p.flush();
+		System.out.println("Enviado " + "USER " + user);
+		s.setSoTimeout(10000);
 		System.out.println(r.readLine());
+
+		// Envia contraseña
+		p.println("PASS " + pass);
+		p.flush();
+		
+
+		if (r.readLine().equals("530 Login or password incorrect!")) {
+			throw new LoginException(user, pass);
+		} else {
+			this.user.setLogged(true);
+		}
 	}
 	
 	public void conectar(InetAddress ip, int port) throws IOException {
@@ -60,35 +98,33 @@ public class ClienteFTP {
 		
 		System.out.println(r.readLine());
 		
-		//Envia login
-		p.println("USER "+ user.getUser());
-		p.flush();
-		System.out.println("Enviado "+"USER "+ user.getUser());
-		System.out.println(r.readLine());
-		p.println("PASS "+user.getPass());
-		p.flush();
-		System.out.println(r.readLine());
+		//Hace login
+		try{
+			log(user.getUser(), user.getPass());
+			
+		}catch(LoginException e) {
+			System.out.println(e);
+		}
 		
-		p.println("PWD");
-		p.flush();
-		System.out.println(r.readLine());
 		
-		p.println("TYPE I");
-		p.flush();
-		System.out.println(r.readLine());
-		
-		p.println("PASV");
-		p.flush();
-		String resp = r.readLine();
-		System.out.println(resp);
-		String a[] = resp.split(",");
-		dataPort = Integer.parseInt(a[4])*256 + Integer.parseInt(a[5].replace(")", ""));
+		if(this.user.getLogged()) {
+			
+			
+			p.println("TYPE I");
+			p.flush();
+			System.out.println(r.readLine());
+			
+			p.println("PASV");
+			p.flush();
+			String resp = r.readLine();
+			System.out.println(resp);
+			String a[] = resp.split(",");
+			dataPort = Integer.parseInt(a[4])*256 + Integer.parseInt(a[5].replace(")", ""));
 
-		System.out.println("Data port: "+dataPort);
-		
-		
-		
-		
+			System.out.println("Data port: "+dataPort);
+			
+		}
+
 	}
 	
 }

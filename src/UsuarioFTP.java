@@ -3,10 +3,12 @@ public class UsuarioFTP {
 	
 	private String user; //guillermo
 	private String pass; //ftp
+	private boolean logged; //true si se ha logueado con exito
 	
 	public UsuarioFTP(String u, String p) {
 		user = u;
 		pass = p;
+		logged = false;
 	}
 
 	public String getUser() {
@@ -23,6 +25,14 @@ public class UsuarioFTP {
 
 	public void setPass(String pass) {
 		this.pass = pass;
+	}
+	
+	public void setLogged(boolean var) {
+		logged = var;
+	}
+	
+	public boolean getLogged() {
+		return logged;
 	}
 
 }
