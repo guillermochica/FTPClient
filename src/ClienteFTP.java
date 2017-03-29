@@ -9,20 +9,49 @@ import java.net.*;
 public class ClienteFTP {
 	
 	private UsuarioFTP user; //Usuario FTP con el que me voy a conectar
+	boolean modo; //true activo, false pasivo
 	
 	//Atributos de socket
 	Socket s;
 	Socket sData;
+	ServerSocket sActive;
 	BufferedReader r;
 	PrintWriter p;
 	PrintWriter pData;
+	
 	
 	int dataPort;
 	InetAddress ip;
 	
 	
-	public ClienteFTP(UsuarioFTP u) throws IOException { 
+	public ClienteFTP(UsuarioFTP u, boolean m) throws IOException { 
 		user = u;
+		modo = m;
+	}
+	
+	public void conectar(InetAddress ip, int port) throws IOException {
+		
+		this.ip = ip;
+		s = new Socket(ip, port);
+		r = new BufferedReader(new InputStreamReader(s.getInputStream()));
+		p = new PrintWriter(s.getOutputStream());
+		
+		System.out.println(r.readLine());
+		
+		//Hace login
+		try{
+			log(user.getUser(), user.getPass());
+			
+
+		}catch(LoginException e) {
+			System.out.println(e);
+		}
+		if(modo) {
+			conectarActivo(ip,port);
+		}
+		else{
+			this.conectarPasv(ip, port);
+		}
 		
 	}
 	
@@ -49,14 +78,12 @@ public class ClienteFTP {
 			p.println("STOR " + fichero);
 			p.flush();
 
-			sData = new Socket(ip, dataPort);
 			
-			pData = new PrintWriter(sData.getOutputStream());
 			System.out.println(r.readLine());
 
 			String text = null;
 			while ((text = reader.readLine()) != null) {
-
+				
 				pData.println(text);
 				pData.flush();
 			}
@@ -81,34 +108,25 @@ public class ClienteFTP {
 		// Envia contraseña
 		p.println("PASS " + pass);
 		p.flush();
+		String respuesta = r.readLine();
+		System.out.println(respuesta);
 		
 
-		if (r.readLine().equals("530 Login or password incorrect!")) {
+		if (respuesta.equals("530 Login or password incorrect!")) {
 			throw new LoginException(user, pass);
 		} else {
 			this.user.setLogged(true);
+			
 		}
 	}
 	
-	public void conectar(InetAddress ip, int port) throws IOException {
-		this.ip = ip;
-		s = new Socket(ip, port);
-		r = new BufferedReader(new InputStreamReader(s.getInputStream()));
-		p = new PrintWriter(s.getOutputStream());
+	public void conectarPasv(InetAddress ip, int port) throws IOException {
 		
-		System.out.println(r.readLine());
 		
-		//Hace login
-		try{
-			log(user.getUser(), user.getPass());
-			
-		}catch(LoginException e) {
-			System.out.println(e);
-		}
 		
 		
 		if(this.user.getLogged()) {
-			
+			System.out.println("Inicio conexion pasiva");
 			
 			p.println("TYPE I");
 			p.flush();
@@ -123,8 +141,46 @@ public class ClienteFTP {
 
 			System.out.println("Data port: "+dataPort);
 			
+			sData = new Socket(ip, dataPort);
+			
+			pData = new PrintWriter(sData.getOutputStream());
+			
 		}
 
+	}
+	
+	public void conectarActivo(InetAddress ip, int port) throws IOException{
+		
+		
+		
+		
+		if(this.user.getLogged()) {
+			System.out.println("Inicio conexion activa");
+			p.println("TYPE I");
+			p.flush();
+			System.out.println(r.readLine());
+
+			//Comando port en la forma: PORT d1,d2,d3,d4,d5,d6
+			//los cuatro primeros digitos son los digitos de la dir ip cliente
+			//los dos ultimos valores para obtener el puerto de datos cliente
+			//puerto de datos cliente= d5*256 + d6. > que 1024
+			
+
+			p.println("PORT 192,168,4,2,10,1");
+			p.flush();
+			System.out.println( r.readLine());
+			
+			p.println("RETR puertoFZServer.txt");
+			p.flush();
+			System.out.println( r.readLine());
+			
+			this.sActive = new ServerSocket(10*256+1);
+			System.out.println("Esperando conexion en el puerto "+10*256+1);
+			sData = sActive.accept();
+			pData = new PrintWriter(sData.getOutputStream());
+			
+
+		}
 	}
 	
 }

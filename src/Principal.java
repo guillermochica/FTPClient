@@ -13,13 +13,26 @@ public class Principal {
 		String user = s.next();
 		System.out.print("Ingrese contraseña: ");
 		String pass = s.next();
+		System.out.print("Escriba p para modo pasivo o a para activo: ");
+		String m = s.next();
 		
+		boolean modo=false;
 		
+		if(m.equals("p")) {
+			modo=false;
+		}
+		else if(m.equals("a")){
+			modo=true;
+		}
+		else{
+			System.out.println("Error: conectando en modo pasivo por defecto");
+			modo=false;
+		}
 
 		UsuarioFTP u = new UsuarioFTP(user, pass);
 		
 		InetAddress ip = InetAddress.getLocalHost();
-		ClienteFTP c = new ClienteFTP(u);
+		ClienteFTP c = new ClienteFTP(u,modo);
 		
 		c.conectar(ip, 21);
 		
